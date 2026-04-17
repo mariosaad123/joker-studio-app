@@ -1,0 +1,21 @@
+{
+  "name": "Joker Studio",
+  "short_name": "Joker",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#22c55e",
+  "icons": [
+    {
+      "src": "/image/app_icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/image/app_icon_larger.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

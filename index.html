@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta charset="UTF-8">
+<title>Joker Studio</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a1a2e">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  direction: rtl;
+  font-family: 'Cairo', sans-serif;
+  background: #f0f0f0;
+  -webkit-text-size-adjust: 100%;
+}
+
+:root {
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #f5f5f5;
+  --color-text-primary: #1a1a2e;
+  --color-text-secondary: #666;
+  --color-border-primary: #ddd;
+  --color-border-secondary: #ccc;
+  --color-border-tertiary: #eee;
+}
+
+.app {
+  direction: rtl;
+  min-height: 100vh;
+  background: #f0f0f0;
+  width: 100%;
+}
+
+/* HEADER */
+.header {
+  background: #fff;
+  border-bottom: 0.5px solid #eee;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-icon {
+  width: 38px; height: 38px;
+  background: #1a1a2e;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  color: #d4af37; font-weight: 700; font-size: 14px;
+}
+.logo-text { font-size: 16px; font-weight: 700; color: #1a1a2e; }
+.logo-sub { font-size: 11px; color: #666; }
+
+.add-btn {
+  background: #1a1a2e; color: #d4af37;
+  border: none; border-radius: 10px;
+  padding: 9px 18px; font-size: 14px; font-weight: 600;
+  cursor: pointer; font-family: 'Cairo', sans-serif;
+}
+
+/* STATS */
+.stats {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px; padding: 12px 16px;
+}
+.stat-card {
+  background: #fff; border-radius: 10px;
+  padding: 12px; border: 0.5px solid #eee; text-align: center;
+}
+.stat-num { font-size: 20px; font-weight: 700; color: #1a1a2e; }
+.stat-label { font-size: 10px; color: #666; margin-top: 2px; }
+
+/* TABS */
+.view-tabs { display: flex; gap: 6px; padding: 0 16px 12px; }
+.tab {
+  flex: 1; padding: 8px; text-align: center;
+  font-size: 13px; font-weight: 600; border-radius: 8px;
+  cursor: pointer; border: 0.5px solid #eee;
+  background: #f5f5f5; color: #666;
+  font-family: 'Cairo', sans-serif;
+}
+.tab.active { background: #1a1a2e; color: #d4af37; border-color: #1a1a2e; }
+
+/* CALENDAR */
+.calendar-wrap { padding: 0 16px 16px; }
+.cal-nav {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 12px;
+}
+.cal-title { font-size: 18px; font-weight: 700; color: #1a1a2e; }
+.nav-btn {
+  background: #f5f5f5; border: 0.5px solid #eee;
+  border-radius: 8px; padding: 7px 14px;
+  cursor: pointer; font-size: 16px; color: #1a1a2e;
+  font-family: 'Cairo', sans-serif;
+}
+.cal-grid {
+  background: #fff; border-radius: 14px;
+  border: 0.5px solid #eee; overflow: hidden;
+}
+.cal-days-header { display: grid; grid-template-columns: repeat(7, 1fr); }
+.cal-day-name {
+  text-align: center; padding: 10px 4px;
+  font-size: 12px; font-weight: 600; color: #666;
+  border-bottom: 0.5px solid #eee;
+}
+.cal-cells { display: grid; grid-template-columns: repeat(7, 1fr); }
+.cal-cell {
+  min-height: 52px; padding: 4px;
+  border-right: 0.5px solid #eee;
+  border-bottom: 0.5px solid #eee;
+  cursor: pointer;
+}
+.cal-cell.empty { cursor: default; }
+.cal-cell.today .day-num {
+  background: #1a1a2e; color: #d4af37;
+  border-radius: 50%; width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+}
+.cal-cell.has-appt { background: #eaf3de; }
+.day-num {
+  font-size: 12px; font-weight: 500; color: #1a1a2e;
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+}
+.appt-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: #3b6d11; margin: 2px auto 0;
+}
+.appt-mini {
+  font-size: 9px; color: #3b6d11; font-weight: 600;
+  margin-top: 1px; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis;
+  text-align: center;
+}
+
+/* LIST VIEW */
+.list-view { padding: 0 16px 80px; display: none; }
+.list-view.show { display: block; }
+.appt-card {
+  background: #fff; border-radius: 12px;
+  border: 0.5px solid #eee;
+  padding: 14px; margin-bottom: 10px; cursor: pointer;
+}
+.appt-card-header {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 8px;
+}
+.appt-names { font-size: 15px; font-weight: 700; color: #1a1a2e; }
+.appt-badge {
+  background: #eaf3de; color: #3b6d11;
+  font-size: 11px; font-weight: 600;
+  padding: 3px 9px; border-radius: 20px;
+}
+.appt-meta { font-size: 12px; color: #666; display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* =============================================
+   MODAL - الحل الجذري
+   نستخدم position:fixed مع top/left/right/bottom
+   بدون inset لأن inset يتأثر بـ RTL
+   المودال يطلع من أسفل الشاشة للأعلى
+   ============================================= */
+.overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 1000;
+  /* اتجاه LTR للـ overlay فقط لمنع تأثير RTL على الموضع */
+  direction: ltr;
+  /* المودال يظهر من أسفل */
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+}
+.overlay.open {
+  display: flex !important;
+}
+
+.modal {
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  padding: 20px;
+  width: 100%;
+  /* 85vh بدل 90vh لضمان ظهور المودال كامل على iPhone */
+  max-height: 85vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* رجوع RTL للمحتوى */
+  direction: rtl;
+  /* منع المودال من الاختفاء خارج الشاشة */
+  position: relative;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal-header {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 16px;
+  position: sticky; top: 0;
+  background: #fff; z-index: 1;
+  padding-bottom: 12px;
+  border-bottom: 0.5px solid #eee;
+}
+.modal-title { font-size: 17px; font-weight: 700; color: #1a1a2e; }
+.close-btn {
+  width: 32px; height: 32px;
+  border: none; background: #f5f5f5;
+  border-radius: 50%; cursor: pointer;
+  font-size: 20px; color: #666;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Cairo', sans-serif;
+  flex-shrink: 0;
+}
+
+/* FORM */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group.full { grid-column: 1 / -1; }
+label { font-size: 12px; font-weight: 600; color: #666; }
+input, select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 15px;
+  background: #f5f5f5;
+  color: #1a1a2e;
+  font-family: 'Cairo', sans-serif;
+  -webkit-appearance: none;
+  appearance: none;
+}
+input:focus {
+  outline: none;
+  border-color: #1a1a2e;
+  box-shadow: 0 0 0 2px rgba(26,26,46,0.15);
+  background: #fff;
+}
+
+.amount-calc {
+  background: #f5f5f5; border-radius: 10px;
+  padding: 10px 12px; margin: 4px 0;
+}
+.amount-row {
+  display: flex; justify-content: space-between;
+  align-items: center; font-size: 13px;
+}
+.amount-label { color: #666; }
+.amount-val { font-weight: 700; color: #1a1a2e; }
+.amount-val.remaining { color: #c0392b; }
+
+/* BUTTONS */
+.actions {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; margin-top: 14px;
+}
+.btn-save {
+  background: #1a1a2e; color: #d4af37;
+  border: none; border-radius: 10px;
+  padding: 13px; font-size: 15px; font-weight: 700;
+  cursor: pointer; font-family: 'Cairo', sans-serif;
+}
+.btn-clear {
+  background: #f5f5f5; color: #666;
+  border: 1px solid #ccc; border-radius: 10px;
+  padding: 13px; font-size: 14px; font-weight: 600;
+  cursor: pointer; font-family: 'Cairo', sans-serif;
+}
+.btn-whatsapp {
+  background: #25D366; color: white;
+  border: none; border-radius: 10px;
+  padding: 13px; font-size: 14px; font-weight: 600;
+  cursor: pointer; font-family: 'Cairo', sans-serif;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-blue {
+  background: #3498db; color: white;
+  border: none; border-radius: 10px;
+  padding: 13px; font-size: 14px; font-weight: 600;
+  cursor: pointer; font-family: 'Cairo', sans-serif;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-delete {
+  background: #fceaea; color: #c0392b;
+  border: 1px solid #f5c6c6; border-radius: 10px;
+  padding: 13px; font-size: 14px; font-weight: 600;
+  cursor: pointer; font-family: 'Cairo', sans-serif;
+}
+.btn-edit {
+  background: #1a1a2e; color: #d4af37;
+  border: none; border-radius: 10px;
+  padding: 13px; font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: 'Cairo', sans-serif;
+}
+
+/* DETAIL ROWS */
+.appt-detail { padding: 4px 0; }
+.detail-row {
+  display: flex; justify-content: space-between;
+  padding: 8px 0; border-bottom: 0.5px solid #eee; font-size: 14px;
+}
+.detail-key { color: #666; flex-shrink: 0; margin-left: 8px; }
+.detail-val { font-weight: 600; color: #1a1a2e; text-align: left; }
+
+/* SHARE OVERLAY */
+.share-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 2000;
+  direction: ltr;
+  align-items: flex-end;
+  justify-content: center;
+}
+.share-overlay.open { display: flex !important; }
+.share-sheet {
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  padding: 20px; width: 100%;
+  direction: rtl;
+}
+.share-title {
+  font-size: 15px; font-weight: 700; color: #1a1a2e;
+  text-align: center; margin-bottom: 16px;
+}
+.share-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.share-opt {
+  border-radius: 12px; padding: 16px 12px;
+  text-align: center; cursor: pointer;
+  border: 0.5px solid #eee; background: #f5f5f5;
+}
+.share-opt-icon { font-size: 28px; margin-bottom: 6px; }
+.share-opt-label { font-size: 13px; font-weight: 600; color: #1a1a2e; }
+.share-cancel {
+  margin-top: 10px; width: 100%; padding: 13px;
+  background: none; border: 1px solid #ccc;
+  border-radius: 10px; font-size: 14px; color: #666;
+  cursor: pointer; font-family: 'Cairo', sans-serif;
+}
+
+/* TOAST */
+.toast {
+  position: fixed; top: 20px; left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a2e; color: #d4af37;
+  padding: 10px 20px; border-radius: 20px;
+  font-size: 14px; font-weight: 600;
+  z-index: 9999; opacity: 0;
+  transition: opacity 0.3s; pointer-events: none;
+  white-space: pre-line; text-align: center;
+  max-width: 90vw;
+}
+.toast.show { opacity: 1; }
+
+/* RESPONSIVE */
+@media (max-width: 480px) {
+  .header { flex-direction: column; align-items: stretch; }
+  .logo { justify-content: center; }
+  .add-btn { width: 100%; justify-content: center; }
+  .cal-cell { min-height: 40px; padding: 2px; }
+  .day-num { font-size: 10px; width: 20px; height: 20px; }
+  .appt-mini { font-size: 8px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .actions { grid-template-columns: 1fr; }
+  .stat-num { font-size: 16px; }
+  .stat-label { font-size: 9px; }
+}
+</style>
+</head>
+
+<body>
+<div class="app" id="app">
+
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">JK</div>
+      <div>
+        <div class="logo-text">Andrew ELJOKER</div>
+        <div class="logo-sub">ستوديو الجوكر</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;width:auto;">
+      <button id="installBtn" class="add-btn" style="display:none;background:#22c55e;color:white;">📲 تحميل التطبيق</button>
+      <button class="add-btn" onclick="openAddModal()">+ موعد جديد</button>
+    </div>
+  </div>
+
+  <div class="stats" id="stats">
+    <div class="stat-card">
+      <div class="stat-num" id="total-count">0</div>
+      <div class="stat-label">مواعيد الشهر</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="total-paid" style="color:#27ae60;">0</div>
+      <div class="stat-label">إجمالي الواصل</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="total-rem" style="color:#c0392b;">0</div>
+      <div class="stat-label">إجمالي الباقي</div>
+    </div>
+  </div>
+
+  <div class="view-tabs">
+    <div class="tab active" onclick="switchTab('calendar')">التقويم</div>
+    <div class="tab" onclick="switchTab('list')">القائمة</div>
+  </div>
+
+  <div class="calendar-wrap" id="cal-view">
+    <div class="cal-nav">
+      <button class="nav-btn" onclick="prevMonth()">&#8249;</button>
+      <div class="cal-title" id="month-title"></div>
+      <button class="nav-btn" onclick="nextMonth()">&#8250;</button>
+    </div>
+    <div class="cal-grid">
+      <div class="cal-days-header" id="day-names"></div>
+      <div class="cal-cells" id="cal-cells"></div>
+    </div>
+  </div>
+
+  <div class="list-view" id="list-view">
+    <div id="list-content"></div>
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="modal-overlay">
+  <div class="modal" id="main-modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">موعد جديد</div>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- SHARE OVERLAY -->
+<div class="share-overlay" id="share-overlay">
+  <div class="share-sheet">
+    <div class="share-title" id="share-title">اختر طريقة المشاركة</div>
+    <div class="share-options">
+      <div class="share-opt" onclick="doShare('whatsapp')">
+        <div class="share-opt-icon">💬</div>
+        <div class="share-opt-label">إرسال واتساب</div>
+      </div>
+      <div class="share-opt" onclick="doShare('pdf')">
+        <div class="share-opt-icon">📄</div>
+        <div class="share-opt-label">تحميل PDF</div>
+      </div>
+    </div>
+    <button class="share-cancel" onclick="closeShare()">إلغاء</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== FIREBASE ====================
+const firebaseConfig = {
+  apiKey: "AIzaSyAxHi6d_Pj1bBJM74Y7Hs1ynnWPM429rQE",
+  authDomain: "joker-appointments.firebaseapp.com",
+  projectId: "joker-appointments",
+  storageBucket: "joker-appointments.firebasestorage.app",
+  messagingSenderId: "690166735440",
+  appId: "1:690166735440:web:ae10a299b8cc890c22a755"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ==================== SERVICE WORKER ====================
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js")
+    .then(() => console.log("SW registered"))
+    .catch(err => console.log(err));
+}
+
+// ==================== CONSTANTS ====================
+const ARABIC_MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const DAY_NAMES = ['أحد','اثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'];
+
+// ==================== STATE ====================
+let currentDate = new Date();
+let currentYear = currentDate.getFullYear();
+let currentMonth = currentDate.getMonth();
+let appointments = [];
+let editingId = null;
+let shareTarget = null;
+let shareAppt = null;
+let renderTimeout = null;
+let tomorrowAlertShown = false;
+
+// ==================== LOCAL STORAGE ====================
+function loadLocalData() {
+  try {
+    const data = localStorage.getItem("appointments");
+    if (data) appointments = JSON.parse(data);
+  } catch(e) { appointments = []; }
+}
+
+function saveLocalData() {
+  try {
+    localStorage.setItem("appointments", JSON.stringify(appointments));
+  } catch(e) {}
+}
+
+// ==================== FIREBASE SYNC ====================
+db.collection("appointments").doc("data").onSnapshot((doc) => {
+  if (!doc.exists) return;
+  const serverData = doc.data().items || [];
+
+  const mergedMap = {};
+
+  // ابدأ ببيانات السيرفر
+  serverData.forEach(item => {
+    mergedMap[item.id] = item;
+  });
+
+  // المحلي يكسب إذا أحدث (سواء تعديل أو حذف)
+  appointments.forEach(localItem => {
+    const serverItem = mergedMap[localItem.id];
+    if (!serverItem) {
+      mergedMap[localItem.id] = localItem;
+    } else {
+      const localTime = new Date(localItem.updatedAt || 0).getTime();
+      const serverTime = new Date(serverItem.updatedAt || 0).getTime();
+      if (localTime >= serverTime) {
+        mergedMap[localItem.id] = localItem;
+      }
+    }
+  });
+
+  appointments = Object.values(mergedMap);
+  saveLocalData();
+
+  if (navigator.onLine) {
+    db.collection("appointments").doc("data")
+      .set({ items: appointments }).catch(e => console.log(e));
+  }
+
+  clearTimeout(renderTimeout);
+  renderTimeout = setTimeout(() => {
+    renderCalendar(); renderStats(); renderList(); checkTomorrowAppointments();
+  }, 150);
+});
+
+function saveData() {
+  saveLocalData();
+  if (navigator.onLine) {
+    db.collection("appointments").doc("data").set({ items: appointments })
+      .catch(e => console.log(e));
+  }
+  renderCalendar();
+  renderStats();
+  renderList();
+}
+
+// ==================== TOAST ====================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ==================== STATS ====================
+function renderStats() {
+  const monthAppts = appointments.filter(a => {
+  if (a.deleted) return false;   // ⭐ مهم
+  if (!a.shootDate) return false;
+
+  const parts = a.shootDate.split('-');
+  return parseInt(parts[1]) - 1 === currentMonth &&
+         parseInt(parts[0]) === currentYear;
+});
+  document.getElementById('total-count').textContent = monthAppts.length;
+  const totalPaid = monthAppts.reduce((s, a) => s + (parseFloat(a.paid) || 0), 0);
+  const totalRem = monthAppts.reduce((s, a) => s + Math.max(0,(parseFloat(a.total)||0) - (parseFloat(a.paid)||0)), 0);
+  document.getElementById('total-paid').textContent = totalPaid.toLocaleString('ar-EG');
+  document.getElementById('total-rem').textContent = totalRem.toLocaleString('ar-EG');
+}
+
+// ==================== CALENDAR ====================
+function renderCalendar() {
+  document.getElementById('month-title').textContent = ARABIC_MONTHS[currentMonth] + ' ' + currentYear;
+  document.getElementById('day-names').innerHTML = DAY_NAMES.map(d => `<div class="cal-day-name">${d}</div>`).join('');
+
+  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const today = new Date();
+
+  let cells = '';
+  for (let i = 0; i < firstDay; i++) cells += `<div class="cal-cell empty"></div>`;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dayAppts = appointments.filter(a =>
+  a.shootDate === dateStr && !a.deleted
+);
+    const isToday = d === today.getDate() && currentMonth === today.getMonth() && currentYear === today.getFullYear();
+    const hasAppt = dayAppts.length > 0;
+    const label = dayAppts.length === 1
+      ? (dayAppts[0].groomName || 'موعد')
+      : (dayAppts.length > 1 ? '📌 ' + dayAppts.length + ' مواعيد' : '');
+
+    cells += `<div class="cal-cell${isToday?' today':''}${hasAppt?' has-appt':''}" onclick="dayClick('${dateStr}')">
+      <div class="day-num">${d}</div>
+      ${hasAppt ? `<div class="appt-dot"></div><div class="appt-mini">${label}</div>` : ''}
+    </div>`;
+  }
+  document.getElementById('cal-cells').innerHTML = cells;
+}
+
+function prevMonth() {
+  if (currentMonth === 0) { currentMonth = 11; currentYear--; } else currentMonth--;
+  renderCalendar(); renderStats();
+}
+function nextMonth() {
+  if (currentMonth === 11) { currentMonth = 0; currentYear++; } else currentMonth++;
+  renderCalendar(); renderStats();
+}
+
+// ==================== LIST ====================
+function renderList() {
+  const sorted = [...appointments]
+  .filter(a => !a.deleted)   // ⭐ مهم
+  .sort((a,b) => (a.shootDate||'') > (b.shootDate||'') ? 1 : -1);
+  const el = document.getElementById('list-content');
+  if (!sorted.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:#666;">لا توجد مواعيد بعد</div>';
+    return;
+  }
+  el.innerHTML = sorted.map(a => `
+    <div class="appt-card" onclick="viewAppt('${a.id}')">
+      <div class="appt-card-header">
+        <div class="appt-names">${a.groomName||''} & ${a.brideName||''}</div>
+        <div class="appt-badge">${a.package||'—'}</div>
+      </div>
+      <div class="appt-meta">
+        <span>📅 ${formatDate(a.shootDate)}</span>
+        <span>📦 ${a.receiveText || formatDate(a.receiveDate)}</span>
+        <span>💰 ${(parseFloat(a.total)||0).toLocaleString('ar-EG')} ج</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', (i===0 && tab==='calendar') || (i===1 && tab==='list'));
+  });
+  document.getElementById('cal-view').style.display = tab === 'calendar' ? '' : 'none';
+  const lv = document.getElementById('list-view');
+  lv.classList.toggle('show', tab === 'list');
+  if (tab === 'list') renderList();
+}
+
+// ==================== UTILS ====================
+function formatDate(d) {
+  if (!d) return '—';
+  const p = d.split('-');
+  return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : d;
+}
+
+// ==================== DAY CLICK ====================
+function dayClick(dateStr) {
+  const dayAppts = appointments.filter(a =>
+  a.shootDate === dateStr && !a.deleted
+);
+  if (dayAppts.length === 0) { openAddModal(dateStr); return; }
+  if (dayAppts.length === 1) { viewAppt(dayAppts[0].id); return; }
+
+  // أكثر من موعد
+  let html = '<div style="display:flex;flex-direction:column;gap:10px;">';
+  dayAppts.forEach(a => {
+    html += `<div onclick="viewAppt('${a.id}')" style="padding:12px;border:1px solid #ddd;border-radius:10px;cursor:pointer;background:#f9f9f9;">
+      <div style="font-weight:700;font-size:15px;color:#1a1a2e;">${a.groomName||''} & ${a.brideName||''}</div>
+      <div style="font-size:12px;color:#666;margin-top:4px;">📦 ${a.package||'—'} | 💰 ${a.total||0} ج</div>
+    </div>`;
+  });
+  html += '</div>';
+
+  document.getElementById('modal-title').textContent = 'اختر الموعد';
+  document.getElementById('modal-body').innerHTML = html;
+  openModal();
+}
+
+// ==================== MODAL OPEN/CLOSE ====================
+function openModal() {
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+  editingId = null;
+}
+
+// ==================== VIEW APPOINTMENT ====================
+function viewAppt(id) {
+  const a = appointments.find(x => x.id === id);
+  if (!a) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = 'تفاصيل الموعد';
+  renderDetails(a);
+  document.getElementById('modal-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  // scroll to top of modal
+  setTimeout(() => {
+    const modal = document.getElementById('main-modal');
+    if (modal) modal.scrollTop = 0;
+  }, 50);
+}
+
+// ==================== RENDER DETAILS ====================
+function renderDetails(a) {
+  const remaining = Math.max(0, (parseFloat(a.total)||0) - (parseFloat(a.paid)||0));
+  document.getElementById('modal-body').innerHTML = `
+    <div class="appt-detail">
+      <div class="detail-row"><span class="detail-key">اسم المصور</span><span class="detail-val">${a.photographer||'—'}</span></div>
+      <div class="detail-row"><span class="detail-key">اسم العريس</span><span class="detail-val">${a.groomName||'—'}</span></div>
+      <div class="detail-row"><span class="detail-key">اسم العروسة</span><span class="detail-val">${a.brideName||'—'}</span></div>
+      <div class="detail-row"><span class="detail-key">البكدج</span><span class="detail-val">${a.package||'—'}</span></div>
+      <div class="detail-row"><span class="detail-key">رقم التليفون</span><span class="detail-val">${a.phone||'—'}${a.phone2 ? ' / ' + a.phone2 : ''}</span></div>
+      <div class="detail-row"><span class="detail-key">المبلغ الكلي</span><span class="detail-val">${(parseFloat(a.total)||0).toLocaleString('ar-EG')} ج</span></div>
+      <div class="detail-row"><span class="detail-key">الواصل</span><span class="detail-val" style="color:#27ae60;">${(parseFloat(a.paid)||0).toLocaleString('ar-EG')} ج</span></div>
+      <div class="detail-row"><span class="detail-key">الباقي</span><span class="detail-val" style="color:#c0392b;">${remaining.toLocaleString('ar-EG')} ج</span></div>
+      <div class="detail-row"><span class="detail-key">تاريخ التصوير</span><span class="detail-val">${formatDate(a.shootDate)}</span></div>
+      <div class="detail-row"><span class="detail-key">تاريخ الاستلام</span><span class="detail-val">${a.receiveText || formatDate(a.receiveDate)}</span></div>
+      <div class="detail-row"><span class="detail-key">العنوان</span><span class="detail-val">${a.location||'—'}</span></div>
+      <div class="detail-row" style="border:none"><span class="detail-key">الكوافير</span><span class="detail-val">${a.hairdresser||'—'}</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px;">
+      <button class="btn-edit" onclick="editAppt('${a.id}')">✏️ تعديل</button>
+      <button class="btn-delete" onclick="deleteAppt('${a.id}')">🗑 حذف</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+      <button class="btn-whatsapp" onclick="openShare('photographer','${a.id}')">📸 نسخ للمصور</button>
+      <button class="btn-blue" onclick="openShare('client','${a.id}')">👤 نسخ للعميل</button>
+    </div>
+  `;
+}
+
+// ==================== ADD MODAL ====================
+function openAddModal(prefillDate) {
+  editingId = null;
+  document.getElementById('modal-title').textContent = 'موعد جديد';
+  renderForm({ shootDate: prefillDate || '' });
+  openModal();
+}
+
+// ==================== EDIT ====================
+function editAppt(id) {
+  const a = appointments.find(x => x.id === id);
+  if (!a) return;
+  editingId = id;
+  document.getElementById('modal-title').textContent = 'تعديل الموعد';
+  renderForm(a);
+  document.getElementById('main-modal').scrollTop = 0;
+}
+
+// ==================== RENDER FORM ====================
+function renderForm(data) {
+  const d = data || {};
+  const receiveDisplay = d.receiveText ? 'block' : 'none';
+  const receiveDateOpacity = d.receiveText ? '0.5' : '1';
+
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>اسم المصور</label>
+        <input id="f-photographer" value="${escHtml(d.photographer||'')}" placeholder="اسم المصور">
+      </div>
+      <div class="form-group">
+        <label>اسم العريس</label>
+        <input id="f-groom" value="${escHtml(d.groomName||'')}" placeholder="اسم العريس">
+      </div>
+      <div class="form-group">
+        <label>اسم العروسة</label>
+        <input id="f-bride" value="${escHtml(d.brideName||'')}" placeholder="اسم العروسة">
+      </div>
+      <div class="form-group full">
+        <label>البكدج</label>
+        <input id="f-package" value="${escHtml(d.package||'')}" placeholder="مثال: بكدج A">
+      </div>
+<div class="form-group full">
+  <label>رقم التليفون</label>
+  <input id="f-phone" value="${escHtml(d.phone||'')}" placeholder="01XXXXXXXXX" type="tel">
+  <div style="display:flex;align-items:center;gap:6px;margin-top:6px;">
+    <input id="f-phone2" value="${escHtml(d.phone2||'')}" placeholder="رقم إضافي (اختياري)" type="tel" style="flex:1;">
+  </div>
+</div>
+      <div class="form-group">
+        <label>المبلغ الكلي</label>
+        <input id="f-total" value="${d.total||''}" placeholder="0" type="number" oninput="calcRemaining()">
+      </div>
+      <div class="form-group">
+        <label>المبلغ الواصل</label>
+        <input id="f-paid" value="${d.paid||''}" placeholder="0" type="number" oninput="calcRemaining()">
+      </div>
+      <div class="form-group full">
+        <div class="amount-calc">
+          <div class="amount-row">
+            <span class="amount-label">المبلغ المتبقي:</span>
+            <span class="amount-val remaining" id="remaining-display">—</span>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>تاريخ التصوير</label>
+        <input id="f-shoot" value="${d.shootDate||''}" type="date">
+      </div>
+      <div class="form-group">
+        <label>تاريخ الاستلام</label>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="date" id="f-receive-date" style="flex:1;opacity:${receiveDateOpacity};" value="${d.receiveDate||''}">
+          <button type="button" onclick="toggleReceiveMode()" style="padding:8px;border-radius:8px;border:1px solid #ccc;cursor:pointer;background:#f5f5f5;font-size:16px;">✍️</button>
+        </div>
+        <input id="f-receive-text" value="${escHtml(d.receiveText||'')}" placeholder="مثال: بعد 15 يوم" style="margin-top:6px;display:${receiveDisplay};">
+      </div>
+      <div class="form-group full">
+        <label>العنوان / اللوكيشن</label>
+        <input id="f-location" value="${escHtml(d.location||'')}" placeholder="عنوان التصوير">
+      </div>
+      <div class="form-group full">
+        <label>اسم الكوافير</label>
+        <input id="f-hairdresser" value="${escHtml(d.hairdresser||'')}" placeholder="اسم الكوافير">
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn-save" onclick="saveAppt()">💾 حفظ</button>
+      <button class="btn-clear" onclick="clearForm()">🗑 مسح الكل</button>
+      <button class="btn-whatsapp" onclick="openShare('photographer', null, true)">📸 للمصور</button>
+      <button class="btn-blue" onclick="openShare('client', null, true)">👤 للعميل</button>
+    </div>
+    <div style="height:20px;"></div>
+  `;
+  calcRemaining();
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function toggleReceiveMode() {
+  const textInput = document.getElementById('f-receive-text');
+  const dateInput = document.getElementById('f-receive-date');
+  if (!textInput || !dateInput) return;
+  if (textInput.style.display === 'none' || textInput.style.display === '') {
+    textInput.style.display = 'block';
+    dateInput.style.opacity = '0.5';
+  } else {
+    textInput.style.display = 'none';
+    dateInput.style.opacity = '1';
+    textInput.value = '';
+  }
+}
+
+function calcRemaining() {
+  const total = parseFloat(document.getElementById('f-total')?.value) || 0;
+  const paid = parseFloat(document.getElementById('f-paid')?.value) || 0;
+  const rem = Math.max(0, total - paid);
+  const el = document.getElementById('remaining-display');
+  if (el) el.textContent = rem.toLocaleString('ar-EG') + ' ج';
+}
+
+function clearForm() {
+  ['f-photographer','f-groom','f-bride','f-package','f-phone','f-phone2','f-total','f-paid','f-shoot','f-receive-date','f-receive-text','f-location','f-hairdresser']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  calcRemaining();
+}
+
+function getFormData() {
+  return {
+    photographer: document.getElementById('f-photographer')?.value?.trim() || '',
+    groomName: document.getElementById('f-groom')?.value?.trim() || '',
+    brideName: document.getElementById('f-bride')?.value?.trim() || '',
+    package: document.getElementById('f-package')?.value?.trim() || '',
+    phone: document.getElementById('f-phone')?.value?.trim() || '',
+    phone2: document.getElementById('f-phone2')?.value?.trim() || '',
+    total: document.getElementById('f-total')?.value || '0',
+    paid: document.getElementById('f-paid')?.value || '0',
+    shootDate: document.getElementById('f-shoot')?.value || '',
+    receiveDate: document.getElementById('f-receive-date')?.value || '',
+    receiveText: document.getElementById('f-receive-text')?.value?.trim() || '',
+    location: document.getElementById('f-location')?.value?.trim() || '',
+    hairdresser: document.getElementById('f-hairdresser')?.value?.trim() || '',
+  };
+}
+
+// ==================== SAVE / DELETE ====================
+function saveAppt() {
+  const data = getFormData();
+  if (!data.groomName) { showToast('من فضلك أدخل اسم العريس'); return; }
+  if (editingId) {
+    const idx = appointments.findIndex(a => a.id === editingId);
+    if (idx !== -1) appointments[idx] = { 
+  ...appointments[idx], 
+  ...data, 
+  updatedAt: new Date().toISOString() // ⭐ مهم
+};
+  } else {
+    appointments.push({ 
+  id: Date.now().toString(), 
+  ...data, 
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString() // ⭐ مهم
+});
+  }
+  saveData();
+  closeModal();
+  showToast('تم الحفظ بنجاح ✓');
+}
+
+
+function deleteAppt(id) {
+  if (!confirm('هل تريد حذف هذا الموعد؟')) return;
+  const idx = appointments.findIndex(a => a.id === id);
+  if (idx !== -1) {
+    appointments[idx].deleted = true;
+    appointments[idx].updatedAt = new Date().toISOString();
+  }
+  saveData();
+  closeModal();
+  showToast('تم الحذف');
+}
+
+// ==================== SHARE ====================
+function openShare(target, id, fromForm) {
+  shareAppt = fromForm ? getFormData() : appointments.find(a => a.id === id);
+  shareTarget = target;
+  document.getElementById('share-title').textContent =
+    target === 'photographer' ? 'مشاركة بيانات المصور' : 'مشاركة بيانات العميل';
+  document.getElementById('share-overlay').classList.add('open');
+}
+
+function closeShare() {
+  document.getElementById('share-overlay').classList.remove('open');
+}
+
+function doShare(method) {
+  closeShare();
+  if (method === 'whatsapp') sendWhatsApp();
+  else generatePDF();
+}
+
+function buildPhotographerMsg(a) {
+  const rem = Math.max(0, (parseFloat(a.total)||0) - (parseFloat(a.paid)||0));
+  return `اسم المصور: ${a.photographer||'—'}
+اسم العريس: ${a.groomName||'—'}
+اسم العروسة: ${a.brideName||'—'}
+البكدج: ${a.package||'—'}
+المبلغ: ${(parseFloat(a.total)||0).toLocaleString('ar-EG')} ج
+الواصل: ${(parseFloat(a.paid)||0).toLocaleString('ar-EG')} ج
+الباقي: ${rem.toLocaleString('ar-EG')} ج
+تاريخ التصوير: ${formatDate(a.shootDate)}
+تاريخ الاستلام: ${a.receiveText || formatDate(a.receiveDate)}
+العنوان: ${a.location||'—'}
+رقم التليفون: ${a.phone||'—'}${a.phone2 ? '\n' + a.phone2 : ''}`;
+}
+
+function buildClientMsg(a) {
+  const rem = Math.max(0, (parseFloat(a.total)||0) - (parseFloat(a.paid)||0));
+  return `Andrew ELJOKER photography
+ستوديو الجوكر
+امام مكتبه الاسكندريه
+
+📱 صفحة الفيسبوك:
+https://www.facebook.com/share/1Cp1Gn5VQg/
+
+📸 انستجرام:
+https://www.instagram.com/andreweljoker_photographer_?igsh=MTQyYnpydHNjNDVuNg==
+
+🎵 تيك توك:
+https://www.tiktok.com/@a.joker.ph?_r=1&_t=ZS-95XoVx3zGHF
+
+البكدج: ${a.package||'—'}
+
+💰 المبلغ الكلي: ${(parseFloat(a.total)||0).toLocaleString('ar-EG')} ج
+💵 الواصل: ${(parseFloat(a.paid)||0).toLocaleString('ar-EG')} ج
+📌 المتبقي: ${rem.toLocaleString('ar-EG')} ج
+
+رقم التليفون:
+01272463961
+01558865578
+
+اسم العريس : ${a.groomName||'—'}
+اسم المصور: ${a.photographer||'—'}
+لوكيشن التصوير: ${a.location||'—'}
+اسم الكوافير: ${a.hairdresser||'—'}
+تاريخ التصوير: ${formatDate(a.shootDate)}
+تاريخ الاستلام: ${a.receiveText || formatDate(a.receiveDate)}`;
+}
+
+function sendWhatsApp() {
+  if (!shareAppt) return;
+  let msg, phone;
+  if (shareTarget === 'photographer') {
+    msg = buildPhotographerMsg(shareAppt);
+    phone = '201272463961';
+  } else {
+    msg = buildClientMsg(shareAppt);
+    phone = (shareAppt.phone||'').replace(/^0/, '20').replace(/\D/g,'');
+  }
+  const url = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  window.open(url, '_blank');
+}
+
+function generatePDF() {
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    doc.setFont("helvetica");
+
+    if (shareTarget === "photographer") {
+      const rem = Math.max(0, (parseFloat(shareAppt.total)||0) - (parseFloat(shareAppt.paid)||0));
+      doc.setFontSize(18);
+      doc.text("Joker Studio - Appointment Details", 105, 20, { align: "center" });
+      const lines = [
+        ["Photographer", shareAppt.photographer||"—"],
+        ["Groom", shareAppt.groomName||"—"],
+        ["Bride", shareAppt.brideName||"—"],
+        ["Package", shareAppt.package||"—"],
+        ["Total", (parseFloat(shareAppt.total)||0) + " EGP"],
+        ["Paid", (parseFloat(shareAppt.paid)||0) + " EGP"],
+        ["Remaining", rem + " EGP"],
+        ["Shoot Date", formatDate(shareAppt.shootDate)],
+        ["Receive Date", shareAppt.receiveText || formatDate(shareAppt.receiveDate)],
+        ["Location", shareAppt.location||"—"],
+        ["Phone", shareAppt.phone||"—"],
+      ];
+      let y = 40;
+      lines.forEach(([k,v]) => {
+        doc.setFontSize(12);
+        doc.setTextColor(120,120,120);
+        doc.text(k + ":", 20, y);
+        doc.setTextColor(30,30,30);
+        doc.text(String(v), 80, y);
+        y += 10;
+      });
+    } else {
+      doc.setFontSize(20);
+      doc.text("Andrew ELJOKER Photography", 105, 20, { align: "center" });
+      doc.setFontSize(13);
+      doc.text("Studio El Joker", 105, 30, { align: "center" });
+      doc.setFontSize(11);
+      doc.setTextColor(80,80,80);
+      doc.text("Facebook: https://www.facebook.com/share/1Cp1Gn5VQg/", 105, 40, { align: "center" });
+      const lines2 = [
+        `Package: ${shareAppt.package||"—"}`,
+        `Phone: 01272463961 / 01558865578`,
+        `Location: ${shareAppt.location||"—"}`,
+        `Hairdresser: ${shareAppt.hairdresser||"—"}`,
+        `Shoot Date: ${formatDate(shareAppt.shootDate)}`,
+        `Receive Date: ${shareAppt.receiveText || formatDate(shareAppt.receiveDate)}`,
+      ];
+      let y = 58;
+      lines2.forEach(line => {
+        doc.setFontSize(13);
+        doc.setTextColor(30,30,30);
+        doc.text(line, 20, y);
+        y += 12;
+      });
+    }
+    doc.save(`joker-studio-${shareTarget}-${Date.now()}.pdf`);
+    showToast("تم تحميل PDF بنجاح ✓");
+  } catch(e) {
+    console.error(e);
+    showToast("حدث خطأ أثناء إنشاء PDF");
+  }
+}
+
+// ==================== TOMORROW ALERT ====================
+function checkTomorrowAppointments() {
+  if (tomorrowAlertShown) return; // لا تكرر
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tStr = tomorrow.toISOString().split('T')[0];
+  const list = appointments.filter(a => a.shootDate === tStr && !a.deleted);
+  if (!list.length) return;
+
+  tomorrowAlertShown = true; // علّم أنها ظهرت
+
+  if (list.length === 1) {
+    const a = list[0];
+    showToast(`📅 غداً لديك موعد:\n👦 ${a.groomName}\n👧 ${a.brideName}`);
+  } else {
+    showToast(`📅 غداً لديك ${list.length} مواعيد`);
+  }
+  if ("Notification" in window && Notification.permission === "granted") {
+    new Notification("📅 تذكير بموعد غداً", {
+      body: list.length === 1 ? `${list[0].groomName} & ${list[0].brideName}` : `لديك ${list.length} مواعيد غداً`,
+      icon: "image/app_icon.png"
+    });
+  }
+}
+
+
+// ==================== ONLINE SYNC ====================
+window.addEventListener("online", async () => {
+  try {
+    const docRef = db.collection("appointments").doc("data");
+    const docSnap = await docRef.get();
+
+    let serverData = [];
+
+    if (docSnap.exists) {
+      serverData = docSnap.data().items || [];
+    }
+
+    const mergedMap = {};
+
+    // بيانات السيرفر
+    serverData.forEach(item => {
+      mergedMap[item.id] = item;
+    });
+
+    // مقارنة مع المحلي
+    appointments.forEach(localItem => {
+      const serverItem = mergedMap[localItem.id];
+
+      if (!serverItem) {
+        mergedMap[localItem.id] = localItem;
+      } else {
+        const localTime = new Date(localItem.updatedAt || 0).getTime();
+        const serverTime = new Date(serverItem.updatedAt || 0).getTime();
+
+        if (localTime > serverTime) {
+          mergedMap[localItem.id] = localItem;
+        }
+      }
+    });
+
+    appointments = Object.values(mergedMap);
+
+    await docRef.set({ items: appointments });
+
+    saveLocalData();
+
+    renderCalendar();
+    renderStats();
+    renderList();
+
+    showToast("تمت المزامنة الذكية ✓");
+
+  } catch(e) {
+    console.log(e);
+  }
+});
+
+// ==================== PWA INSTALL ====================
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById("installBtn").style.display = "block";
+});
+
+document.getElementById("installBtn").onclick = function() {
+  if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+    alert("📲 لتثبيت التطبيق:\nاضغط زر المشاركة ⬆️ ثم اختر 'Add to Home Screen'");
+    return;
+  }
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((result) => {
+      showToast(result.outcome === 'accepted' ? "تم تثبيت التطبيق ✓" : "تم إلغاء التثبيت");
+      deferredPrompt = null;
+    });
+  }
+};
+
+// ==================== INIT ====================
+loadLocalData();
+renderCalendar();
+renderStats();
+renderList();
+</script>
+</body>
+</html>
